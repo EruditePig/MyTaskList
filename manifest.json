@@ -6,21 +6,21 @@
   "permissions": ["tabs","contextMenus"],
   "content_scripts": [{  
     "matches": ["http://m.wsj.net/video/*"],   
-    "js": ["jquery.min.js", "content.js"],   
+    "js": ["util/jquery.min.js", "wsj/content.js"],   
     "run_at": "document_start",  
     "all_frames": true   
     },
 	{  
     "matches": ["https://vpn2.seu.edu.cn/dana-na/auth/url_default/welcome.cgi"],   
-    "js": ["jquery.min.js", "seu_login.js"],   
+    "js": ["util/jquery.min.js", "seu/seu_login.js"],   
     "run_at": "document_end",  
     "all_frames": true   
     }],  
   "background": {
-    "scripts": ["search.js"]
+    "scripts": ["search/search.js"]
   },
   "browser_action": {
-    "default_icon": "icon.png"
+    "default_icon": "images/icon.png"
     // "default_popup": "popup.html"
   }
 }
