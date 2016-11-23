@@ -5,6 +5,7 @@ var _img_width = 115;
 var _img_height = 65;
 var _query_count = 0;    // 最多轮询3次
 
+// 计算直方图
 function get_histogram(imageData) 
 {
     var arr = [];
@@ -25,6 +26,8 @@ function get_histogram(imageData)
     return arr;
 }
 
+// 计算图片相似性
+// 用余弦夹角算法实现
 function calc_similarity(arr1, arr2)
 {
     if (arr1.length != arr2.length) return 0;
@@ -166,9 +169,9 @@ function parse_all_urls()
     }
 }
 
-function search_image(text_input)
+function search_image(img_url)
 {
-    var url = text_input.value;
+    var url = img_url;
     
     var canvas = document.createElement('canvas');
     var context = canvas.getContext('2d');
@@ -237,7 +240,15 @@ window.onload = function()
     btn_search_image.id = "search_image";
     btn_search_image.value = '查找图片';
     btn_search_image.style = 'position:absolute; left:750; top:10';
-    btn_search_image.onclick = function() {search_image(text_search_image_url);};   
+    btn_search_image.onclick = function() {search_image(text_search_image_url.value);};   
     document.body.appendChild(btn_search_image);
     
 }
+
+chrome.runtime.onMessage.addListener(function(request, sender, senderResponse)
+{
+    if(request.action == "WSJ_matchImg")
+    {
+        search_image(request.imgUrl);
+    }
+});
