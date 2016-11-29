@@ -3,7 +3,7 @@
   "name": "SJX_Crx",
   "description": "This is the SJX's crx stufy program.",
   "version": "1.0",
-  "permissions": ["tabs","contextMenus"],
+  "permissions": ["tabs","contextMenus","http://www.etymonline.com/"],
   "content_scripts": 
   [
     {  
@@ -21,6 +21,12 @@
     {  
         "matches": ["https://vpn2.seu.edu.cn/dana-na/auth/url_default/welcome.cgi"],   
         "js": ["util/jquery.min.js", "seu/seu_login.js"],   
+        "run_at": "document_end",  
+        "all_frames": true   
+    },
+    {  
+        "matches": ["http://dict.youdao.com/*"],   
+        "js": ["util/jquery.min.js", "youdao/content_youdao.js"],   
         "run_at": "document_end",  
         "all_frames": true   
     }
