@@ -3,27 +3,32 @@
   "name": "SJX_Crx",
   "description": "This is the SJX's crx stufy program.",
   "version": "1.0",
-  "permissions": ["tabs","contextMenus","http://www.etymonline.com/"],
+  "permissions": ["tabs","contextMenus", "storage", "http://www.etymonline.com/"],
   "content_scripts": 
   [
-    {  
-        "matches": ["http://m.wsj.net/video/*"],   
-        "js": ["util/jquery.min.js", "wsj/content_m_wsj_video.js"],   
-        "run_at": "document_start",  
-        "all_frames": true   
-    },
-    {  
-        "matches": ["https://www.getnewsmart.com/*"],   
-        "js": ["util/jquery.min.js", "wsj/content_getnewsmart.js"],   
-        "run_at": "document_start",  
-        "all_frames": true   
-    },
+    // 已经不用WSJ的学英语服务，所以停掉
+    //{  
+    //    "matches": ["http://m.wsj.net/video/*"],   
+    //    "js": ["util/jquery.min.js", "wsj/content_m_wsj_video.js"],   
+    //    "run_at": "document_start",  
+    //    "all_frames": true   
+    //},
+    //{  
+    //    "matches": ["https://www.getnewsmart.com/*"],   
+    //    "js": ["util/jquery.min.js", "wsj/content_getnewsmart.js"],   
+    //    "run_at": "document_start",  
+    //    "all_frames": true   
+    //},
+    
+    // seu 图书馆 vpn登陆
     {  
         "matches": ["https://vpn2.seu.edu.cn/dana-na/auth/url_default/welcome.cgi"],   
         "js": ["util/jquery.min.js", "seu/seu_login.js"],   
         "run_at": "document_end",  
         "all_frames": true   
     },
+    
+    // 有道词典加上Etyonline查词源
     {  
         "matches": ["http://dict.youdao.com/*"],   
         "js": ["util/jquery.min.js", "youdao/content_youdao.js"],   
@@ -37,7 +42,7 @@
   },
   "browser_action": 
   {
-    "default_icon": "images/icon.png"
-    // "default_popup": "popup.html"
+    "default_icon": "images/icon_16_16.png", 
+    "default_popup": "popup.html"
   }
 }
