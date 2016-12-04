@@ -7,24 +7,60 @@ window.onload = function()
     // 获取最新的书签
     var btnGetLatestBookmarks = document.getElementById("getLatestBookmarks");
     btnGetLatestBookmarks.onclick = getLatestBookmarks;
+    // 添加书签
+    var btnAddBookmark = document.getElementById("addBookmark");
+    btnAddBookmark.onclick = addBookmark;
     
     
 };
 
 // **************** 书签同步相关 ************************
-function onClickRead()
+// 添加书签
+function addBookmark()
 {
-    chrome.storage.local.get("count", function(result){
-        if(result.count == null)
-        {
-            alert("不存在这个变量");
-            return;
-        }
-        else
-        {
-            alert(result.count);
-        }
-    });
+    var staticName = document.createElement("p");
+    staticName.innerHTML = "name";
+    document.body.appendChild(staticName);
+    var inputName = document.createElement("input");
+    document.body.appendChild(inputName);
+    
+    var staticUrl = document.createElement("p");
+    staticUrl.innerHTML = "url";
+    document.body.appendChild(staticUrl);
+    var inputUrl = document.createElement("input");
+    document.body.appendChild(inputUrl);
+    
+    var staticTag = document.createElement("p");
+    staticTag.innerHTML = "tag";
+    document.body.appendChild(staticTag);
+    var inputTag = document.createElement("input");
+    document.body.appendChild(inputTag);
+    
+    var staticDescription = document.createElement("p");
+    staticDescription.innerHTML = "description";
+    document.body.appendChild(staticDescription);
+    var inputDescription = document.createElement("input");
+    document.body.appendChild(inputDescription);
+    
+    var btnSubmit = document.createElement("input");
+    btnSubmit.value = "提交";
+    btnSubmit.type = "button";
+    btnSubmit.onclick = function()
+    {
+        // 先应该检查输入的合理性
+        // 略
+        
+        // 提交到服务器
+        var bookmark = {name:inputName.value, url:inputUrl.value, tag:inputTag.value.split(/[\s,]+/), description:inputDescription.value};
+        var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
+        $.post(url,{action:"addBookmark", bookmark:JSON.stringify(bookmark)})  
+        .done(function(result)
+        {  
+            alert(result);
+            //alert(result == "true" ? "添加书签成功" : "添加书签失败");
+        });
+    };
+    document.body.appendChild(btnSubmit);
 }
 
 function onClickAdd()
@@ -46,28 +82,35 @@ function onClickAdd()
 function getLatestBookmarks()
 {
     var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
-    $.post(url,{action:"getDate"})  
+    $.post(url,{action:"getTime"})  
     .done(function(time)
     {  
-        // 获取当前扩展存储的时间
-        chrome.storage.local.get("time", function(result)
+        if(/^\d+$/.test(time))  // 判断获得的时间是不是正确的（全是数字）
         {
-            if(result.time == null)     // 如果当前扩展没有存储时间，则更新服务器上的书签
+            // 获取当前扩展存储的时间
+            chrome.storage.local.get("time", function(result)
             {
-                UpdateBookmarksFromServer(time);    // 更新书签和服务器同步
-            }
-            else    // 如果当前扩展有时间，则比较，如果早于其时间，则更新服务器上的书签
-            {
-                if(result.time < time)
+                if(result.time == null)     // 如果当前扩展没有存储时间，则更新服务器上的书签
                 {
                     UpdateBookmarksFromServer(time);    // 更新书签和服务器同步
                 }
-                else    // 否则不需要更新
+                else    // 如果当前扩展有时间，则比较，如果早于其时间，则更新服务器上的书签
                 {
-                    alert("当前书签已经是最新。");
+                    if(result.time < time)
+                    {
+                        UpdateBookmarksFromServer(time);    // 更新书签和服务器同步
+                    }
+                    else    // 否则不需要更新
+                    {
+                        alert("当前书签已经是最新。");
+                    }
                 }
-            }
-        });
+            });
+        }
+        else
+        {
+            alert("服务器上的时间格式错误。");
+        }
     });
 }
 
