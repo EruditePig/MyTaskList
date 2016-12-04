@@ -1,6 +1,8 @@
 
 window.onload = function()
 {
+    window.localTest = false;   // 是否本地测试
+    
     // ************ 书签同步相关 ********************
     // 获取最新的书签
     var btnGetLatestBookmarks = document.getElementById("getLatestBookmarks");
@@ -43,8 +45,8 @@ function onClickAdd()
 
 function getLatestBookmarks()
 {
-    //$.post("http://sjxphp56.applinzi.com/bookmarks/bookmarks.php",{action:"getDate"})  
-    $.post("http://localhost/bookmarks/bookmarks.php",{action:"getTime"})  
+    var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
+    $.post(url,{action:"getDate"})  
     .done(function(time)
     {  
         // 获取当前扩展存储的时间
@@ -72,7 +74,8 @@ function getLatestBookmarks()
 // 更新书签和服务器同步
 function UpdateBookmarksFromServer(time)
 {
-    $.post("http://localhost/bookmarks/bookmarks.php",{action:"getBookmarks"})  
+    var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
+    $.post(url,{action:"getBookmarks"})  
         .done(function(bookmarks)
         {  
             var bookmarksBarId;     // 书签栏文件夹的ID
