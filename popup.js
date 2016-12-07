@@ -1,9 +1,10 @@
 
 window.onload = function()
 {
-    window.localTest = false;   // 是否本地测试
+    window.localTest = true;   // 是否本地测试
     
     // ************ 书签同步相关 ********************
+    window.bookmarkUrl = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
     // 获取最新的书签
     var btnGetLatestBookmarks = document.getElementById("getLatestBookmarks");
     btnGetLatestBookmarks.onclick = getLatestBookmarks;
@@ -13,6 +14,42 @@ window.onload = function()
     
     
 };
+
+// **************** 一些对Chrome Extension API的deferred的包装 ************************
+function deferredChromeStorageLocalSet(obj) 
+{
+    var dfrd = $.Deferred();
+    chrome.storage.local.set(obj, function()
+    {
+        if(chrome.runtime.lastError)
+        {
+            console.log(chrome.runtime.lastError.message);
+            dfrd.reject();
+        }
+        else
+        {
+            dfrd.resolve();
+        }
+    });
+    return dfrd.promise()
+}
+function deferredChromeStorageLocalGet(key) 
+{
+    var dfrd = $.Deferred();
+    chrome.storage.local.get(key, function(result)
+    {
+        if(chrome.runtime.lastError)
+        {
+            console.log(chrome.runtime.lastError.message);
+            dfrd.reject();
+        }
+        else
+        {
+            dfrd.resolve(result[key]);
+        }
+    });
+    return dfrd.promise()
+}
 
 // **************** 书签同步相关 ************************
 // 添加书签
@@ -56,84 +93,206 @@ function addBookmark()
         $.post(url,{action:"addBookmark", bookmark:JSON.stringify(bookmark)})  
         .done(function(result)
         {  
-            alert(result);
-            //alert(result == "true" ? "添加书签成功" : "添加书签失败");
+            alert(result == "true" ? "添加书签成功" : "添加书签失败");
         });
     };
     document.body.appendChild(btnSubmit);
 }
 
-function onClickAdd()
-{
-    chrome.storage.local.get("count", function(result){
-        if(result.count == null)
-        {
-            chrome.storage.local.set({"count" : 1});
-        }
-        else
-        {
-            chrome.storage.local.set({"count" : parseInt(result.count) + 1});
-        }
-    });
-    
-    
-}
-
 function getLatestBookmarks()
 {
-    var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
-    $.post(url,{action:"getTime"})  
-    .done(function(time)
-    {  
-        if(/^\d+$/.test(time))  // 判断获得的时间是不是正确的（全是数字）
-        {
-            // 获取当前扩展存储的时间
-            chrome.storage.local.get("time", function(result)
+    // 从服务器上获取最新书签时间
+    var getServerBookmarkTime = function()
+    {
+        var dfrd = $.Deferred();
+        $.post(window.bookmarkUrl,{action:"getTime"})
+        .done(function(result)
             {
-                if(result.time == null)     // 如果当前扩展没有存储时间，则更新服务器上的书签
+                if(/^\d+$/.test(result))
                 {
-                    UpdateBookmarksFromServer(time);    // 更新书签和服务器同步
+                    dfrd.resolve(result);
                 }
-                else    // 如果当前扩展有时间，则比较，如果早于其时间，则更新服务器上的书签
+                else
                 {
-                    if(result.time < time)
-                    {
-                        UpdateBookmarksFromServer(time);    // 更新书签和服务器同步
-                    }
-                    else    // 否则不需要更新
-                    {
-                        alert("当前书签已经是最新。");
-                    }
+                    dfrd.reject("服务器上最新书签时间格式错误！");
                 }
+            })
+        .fail(function()
+            {
+                dfrd.reject("获取最新书签时间失败！");
             });
-        }
-        else
+        return dfrd.promise();
+    };
+    
+    // 记录服务器最新书签时间
+    var serverBookmarkTime;
+    
+    // 从本地扩展获取时间
+    var getLocalBookmarkTime = function()
+    {
+        var dfrd = $.Deferred();
+        $.when(deferredChromeStorageLocalGet("time"))
+        .done(function(time)
+            {
+                dfrd.resolve(time);
+            })
+        .fail(function()
+            {
+                dfrd.reject("获取本地最新时间失败！");
+            });
+        return dfrd.promise();
+    };
+    
+    // 记录本地最新书签时间
+    var localBookmarkTime;
+    
+    // 比较本地和服务器的时间
+    var compareTime = function()
+    {
+         var dfrd = $.Deferred();
+         if(parseInt(localBookmarkTime) < parseInt(serverBookmarkTime))
+         {
+             dfrd.resolve();
+         }
+         else
+         {
+             dfrd.reject("当前书签已经是最新，不需要更新。");
+         }
+         return dfrd.promise();
+    }
+    
+    // 服务器最新书签
+    var serverBookmarks;
+    
+    // 获取服务器最新书签
+    var getServerBookmarks = function()
+    {
+        var dfrd = $.Deferred();
+        $.post(window.bookmarkUrl,{action:"getBookmarks"})
+        .done(function(result)
+            {
+                serverBookmarks = result;
+                dfrd.resolve(result);
+            })
+        .fail(function()
+            {
+                dfrd.reject("获取最新书签失败！");
+            });
+        return dfrd.promise();
+    }
+    
+    // 存储书签到本地
+    var saveBookmarks = function(bookmarks)
+    {
+        var dfrd = $.Deferred();
+        $.when(deferredChromeStorageLocalSet({time:serverBookmarkTime, bookmarks:bookmarks}))
+        .done(
+            function()
+            {
+                dfrd.resolve();
+            })
+        .fail(
+            function()
+            {
+                dfrd.reject("存储书签到本地失败！");
+            });
+        return dfrd.promise();
+    };
+    
+    // 获取书签栏ID
+    var getBookmarkBarID = function()
+    {
+        var dfrd = $.Deferred();
+        chrome.bookmarks.getTree(function(results) 
         {
-            alert("服务器上的时间格式错误。");
-        }
-    });
+            dfrd.resolve(results[0].children[0].id);     // 获取书签栏文件夹的ID
+        })
+        return dfrd.promise();
+    };
+    
+    var delBookmarkFolder = function(folderID)
+    {
+        var dfrd = $.Deferred();
+        chrome.bookmarks.removeTree(folderID, function()
+        {
+            dfrd.resolve();
+        });
+        return dfrd.promise();
+    }
+    
+    // 删除书签栏上所有的书签
+    var delAllBookmarksInBookmarkBar = function(bookmarkBarID)
+    {
+        var dfrd = $.Deferred();
+        chrome.bookmarks.getSubTree(bookmarkBarID, function(results)
+        {
+            var promises = [];
+            // 读取书签栏根目录下所有书签并删除
+            for(var i=0; i<results[0].children.length; ++i)
+            {
+                promises.push(delBookmarkFolder(results[0].children[i].id));
+            }
+            $.when.apply($, promises)
+            .then(
+                function()
+                {
+                    dfrd.resolve();
+                }
+                ,function()
+                {
+                    dfrd.reject();
+                });
+        });
+        return dfrd.promise();
+    };
+    
+    $.when(getServerBookmarkTime())    // 从服务器上获取最新书签时间
+    .then(
+        function(time)    // 记录服务器最新书签时间，并读取本地扩展时间
+        {
+            serverBookmarkTime = time; 
+            return getLocalBookmarkTime();
+        })
+    .then(
+        function(time)
+        {
+            localBookmarkTime = time;   // 保存本地时间
+            return compareTime();       // 对比服务器时间和本地时间
+        })
+    .then(
+        function()
+        {
+            return getServerBookmarks();    // 如果服务器时间更新，则获取服务器书签数据
+        })
+    .then(
+        function(bookmarks)
+        {
+            serverBookmarks = bookmarks;
+            return saveBookmarks(bookmarks);
+        })
+    .then(getBookmarkBarID)  // 获取书签栏ID
+    .then(delAllBookmarksInBookmarkBar) // 删除书签栏所有书签
+    .done(function(){alert("书签删除完毕");})
+    .fail(function(msg){alert(msg);})
 }
 
-// 更新书签和服务器同步
-function UpdateBookmarksFromServer(time)
+// 根据书签数据生成书签
+function refillBookmarkBar(bookmarks)
 {
-    var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
-    $.post(url,{action:"getBookmarks"})  
-        .done(function(bookmarks)
-        {  
-            var bookmarksBarId;     // 书签栏文件夹的ID
-            chrome.bookmarks.getTree(function(results) 
+    var bookmarksBarId;     // 书签栏文件夹的ID
+    chrome.bookmarks.getTree(function(results) 
+    {
+        bookmarksBarId = results[0].children[0].id;     // 获取书签栏文件夹的ID
+        chrome.bookmarks.getSubTree(bookmarksBarId, function(results)
+        {
+            // 读取书签栏根目录下所有书签并删除
+            for(var i=0; i<results[0].children.length; ++i)
             {
-                bookmarksBarId = results[0].children[0].id;     // 获取书签栏文件夹的ID
-                chrome.bookmarks.getSubTree(bookmarksBarId, function(results)
-                {
-                    // 读取书签栏根目录下所有书签并删除
-                    for(var i=0; i<results[0].children.length; ++i)
-                    {
-                        chrome.bookmarks.removeTree(results[0].children[i].id);
-                    }
-                });
-            });
+                chrome.bookmarks.removeTree(results[0].children[i].id);
+            }
+        });
+    });
+            // 定时器等根目录下书签删除干净了之后再添加
             var timeID = setInterval(function()
             {
                 // 检测是不是书签栏根目录下删除干净了
@@ -143,6 +302,7 @@ function UpdateBookmarksFromServer(time)
                     {
                         clearInterval(timeID);      // 停止计时器
                         chrome.storage.local.set({"time" : time});      // 往扩展里存储本次书签对应的时间
+                        chrome.storage.local.set({"bookmarks" : bookmarks});    // 往扩展里存储本次书签
                         // 开始添加书签 
                         var objBookmarks = JSON.parse(bookmarks);   // 书签字符串转对象
                         var bmFolder = {};
@@ -166,8 +326,6 @@ function UpdateBookmarksFromServer(time)
                     }
                 });
             }, 300); 
-        });
-    
 }
 
 // 将书签列表转化为树状文件夹的形式
