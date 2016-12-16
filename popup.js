@@ -1,10 +1,11 @@
 
 window.onload = function()
 {
+    // ************全局变量***********
     window.localTest = false;   // 是否本地测试
-    
-    // ************ 书签同步相关 ********************
     window.bookmarkUrl = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
+    
+    // ************事件绑定************
     // 获取最新的书签
     var btnGetLatestBookmarks = document.getElementById("getLatestBookmarks");
     btnGetLatestBookmarks.onclick = getLatestBookmarks;
@@ -52,53 +53,232 @@ function deferredChromeStorageLocalGet(key)
 }
 
 // **************** 书签同步相关 ************************
+// 统计书签的标签
+function getBookmarksTagStat(bm)
+{
+    var tagContainer = {};
+    // 循环所有书签，给所有tag计数
+    for (var i=0; i<bm.length; ++i)
+    {
+        for (var j=0; j<bm[i].tag.length; ++j)
+        {
+            if(bm[i].tag[j] != "")
+            {
+                if (tagContainer.hasOwnProperty(bm[i].tag[j]))
+                {
+                    tagContainer[bm[i].tag[j]] += 1;
+                }
+                else
+                {
+                    tagContainer[bm[i].tag[j]] = 1;
+                }
+            }
+        }
+    }
+    return tagContainer;
+}
+
+// 将书签列表转化为树状文件夹的形式
+function transBookmarksFromArray2FolderTree(bm, bmFolder, bmNoFolder)
+{
+    var tagContainer = getBookmarksTagStat(bm);
+    // 循环所有书签，根据自己tag中的最多的那个，决定如何分配
+    for(item in tagContainer)
+    {
+        if(tagContainer[item] > 1)
+        {
+            bmFolder[item] = [];
+        }
+    }
+    
+    for(var i=0; i<bm.length; ++i)
+    {
+        if(bm[i].tag.length == 0)
+        {
+            bmNoFolder.push(bm[i]);
+        }
+        else
+        {
+            var maxCount = 0;
+            var maxTag;
+            for(var j=0; j<bm[i].tag.length; ++j)
+            {
+                if(tagContainer[bm[i].tag[j]] > maxCount)
+                {
+                    maxCount = tagContainer[bm[i].tag[j]];
+                    maxTag = bm[i].tag[j];
+                }
+            }
+            if(maxCount == 1)
+            {
+                bmNoFolder.push(bm[i]);
+            }
+            else
+            {
+                bmFolder[maxTag].push(bm[i]);
+            }
+        }
+    }
+}
+    
 // 添加书签
 function addBookmark()
 {
-    var staticName = document.createElement("p");
-    staticName.innerHTML = "name";
-    document.body.appendChild(staticName);
+    // 外框
+    var divAdd = document.createElement("div");
+    document.body.appendChild(divAdd);
+    
+    // name
+    var divName = document.createElement("div");
+    divName.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divName);
+    var labelName = document.createElement("label");
+    labelName.style = "float: left; width: 20%;";
+    labelName.innerHTML = "name";
+    divName.appendChild(labelName);
     var inputName = document.createElement("input");
-    document.body.appendChild(inputName);
+    inputName.style = "display: block; width: 75%;";
+    divName.appendChild(inputName);
     
-    var staticUrl = document.createElement("p");
-    staticUrl.innerHTML = "url";
-    document.body.appendChild(staticUrl);
+    // url
+    var divUrl = document.createElement("div");
+    divUrl.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divUrl);
+    var labelUrl = document.createElement("label");
+    labelUrl.style = "float: left; width: 20%;";
+    labelUrl.innerHTML = "url";
+    divUrl.appendChild(labelUrl);
     var inputUrl = document.createElement("input");
-    document.body.appendChild(inputUrl);
+    inputUrl.style = "display: block; width: 75%;";
+    divUrl.appendChild(inputUrl);
     
-    var staticTag = document.createElement("p");
-    staticTag.innerHTML = "tag";
-    document.body.appendChild(staticTag);
+    // tag
+    var divTag = document.createElement("div");
+    divTag.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divTag);
+    var labelTag = document.createElement("label");
+    labelTag.style = "float: left; width: 20%;";
+    labelTag.innerHTML = "tag";
+    divTag.appendChild(labelTag);
     var inputTag = document.createElement("input");
-    document.body.appendChild(inputTag);
+    inputTag.style = "float: left; width: 60%;";
+    divTag.appendChild(inputTag);
+    var showTagSelect = document.createElement("input");
+    divTag.appendChild(showTagSelect);
+    showTagSelect.value = "▼";
+    showTagSelect.type = "button";
+    showTagSelect.style = "float: right; width: 15%;padding : 0;";
+    showTagSelect.onclick = function()
+    {
+        var ele = document.getElementById("tagSelect");
+        if(ele)
+        {
+            if(this.value == "▼")
+            {
+                ele.style.display = "inline";
+                this.value = "▲";
+            }
+            else
+            {
+                ele.style.display = "none";
+                this.value = "▼";
+            }
+        }
+    }
+    // tag按钮行为函数
+    var tagDefine = function()
+    {
+        if(inputTag.value.search(/[^\s]/) != -1)
+        {
+            var tags = inputTag.value.split(/[\s,]+/);
+            for(var i=0; i<tags.length; ++i)
+            {
+                if(tags[i] == this.value)
+                {
+                    tags.splice(i,1);
+                    inputTag.value = tags.toString();
+                    return;
+                }
+            }
+            tags.push(this.value);
+            inputTag.value = tags.toString();
+        }
+        else
+        {
+            inputTag.value = this.value;
+        }
+    };
     
-    var staticDescription = document.createElement("p");
-    staticDescription.innerHTML = "description";
-    document.body.appendChild(staticDescription);
-    var inputDescription = document.createElement("input");
-    document.body.appendChild(inputDescription);
     
+    // 分析常用的几个标签，动态展示出来
+    $.when(deferredChromeStorageLocalGet("bookmarks"))
+    .done(
+        function(localBookmarks)
+        {
+            var tagSelect = document.createElement("select");
+            divTag.appendChild(tagSelect);
+            tagSelect.multiple = "multiple";
+            tagSelect.id = "tagSelect";
+            tagSelect.style.display = "none";
+            tagSelect.size = 8;
+            var objBookmarks = JSON.parse(localBookmarks);
+            var tagStat = getBookmarksTagStat(objBookmarks);
+            var tagList = [];
+            for(item in tagStat)
+            {
+                tagList.push([item, tagStat[item]]);
+            }
+            tagList.sort(function(a,b)
+            {
+                a = a[1];
+                b = b[1];
+                return a>b ? -1 : (a<b ? 1 : 0);
+            });
+            for(var i=0; i<tagList.length; ++i)
+            {
+                var option = document.createElement("option");
+                option.value = tagList[i][0];
+                option.innerHTML = tagList[i][0]
+                option.onclick = tagDefine;
+                tagSelect.appendChild(option);
+            }
+        });
+            
+    // description
+    var divDesp = document.createElement("div");
+    divDesp.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divDesp);
+    var labelDesp = document.createElement("label");
+    labelDesp.style = "float: left; width: 20%;";
+    labelDesp.innerHTML = "描述";
+    divDesp.appendChild(labelDesp);
+    var inputDesp = document.createElement("input");
+    inputDesp.style = "display: block; width: 75%;";
+    divDesp.appendChild(inputDesp);
+
+    // 提交按钮
     var btnSubmit = document.createElement("input");
+    divAdd.appendChild(btnSubmit);
     btnSubmit.value = "提交";
     btnSubmit.type = "button";
+    btnSubmit.style = "float: right";
     btnSubmit.onclick = function()
     {
-        // 先应该检查输入的合理性
-        // 略
-        
-        // 提交到服务器
-        var bookmark = {name:inputName.value, url:inputUrl.value, tag:inputTag.value.split(/[\s,]+/), description:inputDescription.value};
-        var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
-        $.post(url,{action:"addBookmark", bookmark:JSON.stringify(bookmark)})  
-        .done(function(result)
-        {  
-            alert(result == "true" ? "添加书签成功" : "添加书签失败");
-        });
+       // 先应该检查输入的合理性
+       // 暂略
+       
+       // 提交到服务器
+       var bookmark = {name:inputName.value, url:inputUrl.value, tag:inputTag.value.split(/[\s,]+/), description:inputDesp.value};
+       var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
+       $.post(url,{action:"addBookmark", bookmark:JSON.stringify(bookmark)})  
+       .done(function(result)
+       {  
+           alert(result == "true" ? "添加书签成功" : "添加书签失败");
+       });
     };
-    document.body.appendChild(btnSubmit);
 }
 
+// 同步书签
 function getLatestBookmarks()
 {
     // 书签同步过程中需要用到的状态变量
@@ -252,63 +432,7 @@ function getLatestBookmarks()
     };
     
         
-    // 将书签列表转化为树状文件夹的形式
-    function transBookmarksFromArray2FolderTree(bm, bmFolder, bmNoFolder)
-    {
-        var tagContainer = {};
-        // 循环所有书签，给所有tag计数
-        for (var i=0; i<bm.length; ++i)
-        {
-            for (var j=0; j<bm[i].tag.length; ++j)
-            {
-                if (tagContainer.hasOwnProperty(bm[i].tag[j]))
-                {
-                    tagContainer[bm[i].tag[j]] += 1;
-                }
-                else
-                {
-                    tagContainer[bm[i].tag[j]] = 1;
-                }
-            }
-        }
-        // 循环所有书签，根据自己tag中的最多的那个，决定如何分配
-        for(item in tagContainer)
-        {
-            if(tagContainer[item] > 1)
-            {
-                bmFolder[item] = [];
-            }
-        }
-        
-        for(var i=0; i<bm.length; ++i)
-        {
-            if(bm[i].tag.length == 0)
-            {
-                bmNoFolder.push(bm[i]);
-            }
-            else
-            {
-                var maxCount = 0;
-                var maxTag;
-                for(var j=0; j<bm[i].tag.length; ++j)
-                {
-                    if(tagContainer[bm[i].tag[j]] > maxCount)
-                    {
-                        maxCount = tagContainer[bm[i].tag[j]];
-                        maxTag = bm[i].tag[j];
-                    }
-                }
-                if(maxCount == 1)
-                {
-                    bmNoFolder.push(bm[i]);
-                }
-                else
-                {
-                    bmFolder[maxTag].push(bm[i]);
-                }
-            }
-        }
-    }
+
     // 重建书签栏
     var refillBookmarkBar = function()
     {
