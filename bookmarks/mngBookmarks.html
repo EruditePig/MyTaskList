@@ -1,0 +1,44 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>管理书签</title>
+    <script src="../util/jquery.min.js"></script>
+                
+    <!-- poshytip -->
+    <link href="../util/X-editable/tip-yellowsimple.css" rel="stylesheet">
+    <script src="../util/X-editable/jquery.poshytip.js"></script>
+        
+    <!-- x-editable (jquery) -->
+    <link href="../util/X-editable/jquery-editable.css" rel="stylesheet">
+    <script src="../util/X-editable/jquery-editable-poshytip.js"></script>
+    <script src="mngBookmarks.js"></script>
+</head>
+
+<body>
+    <div id="nav" style="position:fixed;z-index:100;background:#f1f1f1;width:100%;height:30px">
+        <table>
+            <tr>
+                <td>
+                    <input type="button" value="从服务器获取书签" id="getBookmarksFromServer"/>
+                </td>
+                <td>
+                    <input type="button" value="保存至服务器" id="saveBookmarksToServer"/>
+                </td>
+                <td>
+                    <input type="button" value="读取本地书签" id="getLocalBookmarks"/>
+                </td>
+                <td>
+                    <input type="button" value="保存到本地" id="saveLocalBookmarks"/>
+                </td>
+                <td>
+                    <input type="button" value="更新至书签栏" id="updateBookmarkBar"/>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div id="bookmarksTable" style="padding-top: 30px;"></div>
+</body>
+
+</html>

@@ -12,6 +12,9 @@ window.onload = function()
     // 添加书签
     var btnAddBookmark = document.getElementById("addBookmark");
     btnAddBookmark.onclick = addBookmark;
+    // 管理书签
+    var btnMngBookmark = document.getElementById("mngBookmark");
+    btnMngBookmark.onclick = mngBookmark;
     
     
 };
@@ -53,6 +56,12 @@ function deferredChromeStorageLocalGet(key)
 }
 
 // **************** 书签同步相关 ************************
+// 管理书签
+function mngBookmark()
+{
+    chrome.runtime.openOptionsPage();
+}
+
 // 统计书签的标签
 function getBookmarksTagStat(bm)
 {
@@ -190,7 +199,7 @@ function addBookmark()
     {
         if(inputTag.value.search(/[^\s]/) != -1)
         {
-            var tags = inputTag.value.split(/[\s,]+/);
+            var tags = inputTag.value.split(/,/).map(function(s) { return s.trim() }).filter(Boolean);
             for(var i=0; i<tags.length; ++i)
             {
                 if(tags[i] == this.value)
@@ -268,7 +277,7 @@ function addBookmark()
        // 暂略
        
        // 提交到服务器
-       var bookmark = {name:inputName.value, url:inputUrl.value, tag:inputTag.value.split(/[\s,]+/), description:inputDesp.value};
+       var bookmark = {name:inputName.value, url:inputUrl.value, tag:inputTag.value.split(/,/).map(function(s) { return s.trim() }).filter(Boolean), description:inputDesp.value};
        var url = window.localTest ? "http://localhost/bookmarks/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
        $.post(url,{action:"addBookmark", bookmark:JSON.stringify(bookmark)})  
        .done(function(result)
