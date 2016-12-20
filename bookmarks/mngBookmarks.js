@@ -10,7 +10,26 @@ $(document).ready(function()
     $("#getLocalBookmarks").click(getLocalBookmarks);
     $("#saveLocalBookmarks").click(saveLocalBookmarks);
     $("#updateBookmarkBar").click(updateBookmarkBar);
+    $("#delSelectedBookmarks").click(delSelectedBookmarks);
+    $("#adddBookmark").click(adddBookmark);
+    
 });
+
+// 切换模块对话框的显示
+function showModalDialog()
+{
+    var e1 = document.getElementById('modal-overlay');			
+    e1.style.visibility = "visible";
+}
+
+function hideModalDialog()
+{
+    var e1 = document.getElementById('modal-overlay');			
+    e1.style.visibility = "hidden";
+    
+    $("#modal-data").empty();
+}
+
 
 // **************** 一些对Chrome Extension API的deferred的包装 ************************
 function deferredChromeStorageLocalSet(obj) 
@@ -51,6 +70,7 @@ function deferredChromeStorageLocalGet(key)
 // 从服务器读取书签
 function getBookmarksFromServer()
 {
+    clearTable();
     $.post(window.bookmarkUrl,{action:"getBookmarks"})
     .done(function(result)
         {
@@ -66,6 +86,7 @@ function getBookmarksFromServer()
 // 从本地读取书签
 function getLocalBookmarks()
 {
+    clearTable();
     $.when(deferredChromeStorageLocalGet("bookmarks"))
     .done(
         function(result)
@@ -109,6 +130,33 @@ function saveBookmarksToServer()
     });
 }
 
+
+// 统计书签的标签
+function getBookmarksTagStat(bm)
+{
+    var tagContainer = {};
+    // 循环所有书签，给所有tag计数
+    for (var i=0; i<bm.length; ++i)
+    {
+        var tags = bm[i].tag.split(/,/).map(function(s) { return s.trim() }).filter(Boolean);
+        for (var j=0; j<tags.length; ++j)
+        {
+            if(tags[j] != "")
+            {
+                if (tagContainer.hasOwnProperty(tags[j]))
+                {
+                    tagContainer[tags[j]] += 1;
+                }
+                else
+                {
+                    tagContainer[tags[j]] = 1;
+                }
+            }
+        }
+    }
+    return tagContainer;
+}
+    
 // 书签更新到书签栏上
 function updateBookmarkBar()
 {
@@ -162,31 +210,6 @@ function updateBookmarkBar()
         return dfrd.promise();
     };
    
-   // 统计书签的标签
-   var getBookmarksTagStat = function(bm)
-   {
-        var tagContainer = {};
-        // 循环所有书签，给所有tag计数
-        for (var i=0; i<bm.length; ++i)
-        {
-            var tags = bm[i].tag.split(/,/).map(function(s) { return s.trim() }).filter(Boolean);
-            for (var j=0; j<tags.length; ++j)
-            {
-                if(tags[j] != "")
-                {
-                    if (tagContainer.hasOwnProperty(tags[j]))
-                    {
-                        tagContainer[tags[j]] += 1;
-                    }
-                    else
-                    {
-                        tagContainer[tags[j]] = 1;
-                    }
-                }
-            }
-        }
-        return tagContainer;
-    };
 
    // 将书签列表转化为树状文件夹的形式
    var transBookmarksFromArray2FolderTree = function(bm, bmFolder, bmNoFolder)
@@ -265,6 +288,207 @@ function updateBookmarkBar()
     .done(refillBookmarkBar)    // 重置书签栏
     .fail(function(msg){alert(msg);});
 }
+
+// 删除选定的书签
+function delSelectedBookmarks()
+{
+    var selectedRow = getSelectedBookmarks()
+    selectedRow.sort(function(a,b){return b-a;});
+    var table = $("#bookmarksTable")[0];
+    for(var i=0; i<selectedRow.length; ++i)
+    {
+        console.log(selectedRow[i]);
+        table.deleteRow(selectedRow[i]);
+    }
+}
+
+// 添加书签
+function adddBookmark()
+{
+    showModalDialog();    // 显示对话框
+    
+    var divAdd = document.createElement("div");
+    $("#modal-data").append(divAdd);
+    
+    // title
+    var title = document.createElement("p");
+    title.innerHTML = "添加书签";
+    divAdd.appendChild(title);
+    
+    
+    // name
+    var divName = document.createElement("div");
+    divAdd.appendChild(divName);
+    divName.style = "margin-top: 5px;margin-bottom: 5px;";
+    var labelName = document.createElement("label");
+    labelName.style = "display:inline-block; width: 20%;";
+    labelName.innerHTML = "name";
+    divName.appendChild(labelName);
+    var inputName = document.createElement("input");
+    inputName.style = "display:inline-block;; width: 75%;";
+    divName.appendChild(inputName);
+    
+    // url
+    var divUrl = document.createElement("div");
+    divUrl.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divUrl);
+    var labelUrl = document.createElement("label");
+    labelUrl.style = "display:inline-block; width: 20%;";
+    labelUrl.innerHTML = "url";
+    divUrl.appendChild(labelUrl);
+    var inputUrl = document.createElement("input");
+    inputUrl.style = "display:inline-block;; width: 75%;";
+    divUrl.appendChild(inputUrl);
+    
+    // tag
+    var divTag = document.createElement("div");
+    divTag.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divTag);
+    var labelTag = document.createElement("label");
+    labelTag.style = "display:inline-block; width: 20%;";
+    labelTag.innerHTML = "tag";
+    divTag.appendChild(labelTag);
+
+    // 分析常用的几个标签，动态展示出来
+    $.when(deferredChromeStorageLocalGet("bookmarks"))
+    .done(
+        function(localBookmarks)
+        {
+            // 获取书签的tag列表
+            var objBookmarks = JSON.parse(localBookmarks);
+            var tagStat = getBookmarksTagStat(objBookmarks);
+            var tagListWithCount = [];
+            for(item in tagStat)
+            {
+                tagListWithCount.push([item, tagStat[item]]);
+            }
+            tagListWithCount.sort(function(a,b)
+            {
+                a = a[1];
+                b = b[1];
+                return a>b ? -1 : (a<b ? 1 : 0);
+            });
+            var tagList = [];
+            for(i in tagListWithCount)
+            {
+                tagList.push(tagListWithCount[i][0])
+            }
+            // 用带标签的下拉选项
+            var inputTag = document.createElement("a");
+            divTag.appendChild(inputTag);
+            inputTag.style = "display:inline-block; width: 75%;";
+            inputTag.id = "editableTag";
+            $('#editableTag').editable({
+                type: 'select2',
+                title : "Enter Tags",
+                select2: {
+                    placeholder: 'Enter Tags',
+                    width : "200px",
+                    tags: tagList,
+                    tokenSeparators: [",", " "],
+                    closeOnSelect: false
+                }
+            });
+        })
+    .fail(
+        function()
+        {
+            var inputTag = document.createElement("input");
+            inputTag.style = "display:inline-block;; width: 75%;";
+            divTag.appendChild(inputTag);
+        });
+            
+    // description
+    var divDesp = document.createElement("div");
+    divDesp.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divDesp);
+    var labelDesp = document.createElement("label");
+    labelDesp.style = "display:inline-block; width: 20%;";
+    labelDesp.innerHTML = "描述";
+    divDesp.appendChild(labelDesp);
+    var inputDesp = document.createElement("input");
+    inputDesp.style = "display:inline-block;; width: 75%;";
+    divDesp.appendChild(inputDesp);
+    
+    // 提交按钮
+    var divBtn = document.createElement("div");
+    divBtn.style = "text-align: right;";
+    divAdd.appendChild(divBtn);
+    var btnSubmit = document.createElement("input");
+    divBtn.appendChild(btnSubmit);
+    btnSubmit.value = "提交";
+    btnSubmit.type = "button";
+    btnSubmit.style = "display:inline-block;";
+    btnSubmit.onclick = function()
+    {
+        var inputTag = document.getElementById("editableTag");
+        if(inputTag.tagName.toLowerCase() == "a")
+        {
+            var tagText = inputTag.innerHTML;
+        }
+        else
+        {
+            var tagText = inputTag.value;
+        }
+        if(tagText.toLowerCase() == "empty" )
+        {
+            tagText = "";
+        }
+        var nameText = inputName.value;
+        var urlText = inputUrl.value;
+        var despText = inputDesp.value;
+        validateBookmark(nameText, urlText, tagText, despText);
+        var bookmark = {name:nameText, url:urlText, tag:tagText, description:despText};
+        hideModalDialog();
+        addBookmarkToTable(bookmark, 0);
+        makeTableEditable();
+    };
+    var btnQuit = document.createElement("input");
+    divBtn.appendChild(btnQuit);
+    btnQuit.value = "取消";
+    btnQuit.type = "button";
+    btnQuit.style = "display:inline-block;";
+    btnQuit.onclick = hideModalDialog;
+}
+
+// 让表格变的可编辑
+function makeTableEditable()
+{
+    $('.editable').editable(
+    {
+       type: 'text',
+       value : '',
+       mode : 'popup',
+    });
+}
+
+// 清空表格
+function clearTable()
+{
+    $("#bookmarksTable").remove();
+}
+
+// 验证输入
+function validateBookmark(nameText, urlText, tagText, despText)
+{
+    if(nameText.toLowerCase() == "empty" )
+    {
+        nameText = "";
+    }
+    if(urlText.toLowerCase() == "empty" )
+    {
+        urlText = "";
+    }
+    if(tagText.toLowerCase() == "empty" )
+    {
+        tagText = "";
+    }
+    if(despText.toLowerCase() == "empty" )
+    {
+        despText = "";
+    }
+}
+
 // 读表格内容
 function getBookmarksFromTable()
 {
@@ -272,10 +496,12 @@ function getBookmarksFromTable()
     var bm = [];
     for (var i = 0; i < table.rows.length; i++) 
     {  //遍历Table的所有Row
-        bm.push({name:table.rows[i].cells[0].childNodes[0].innerHTML,
-                 url:table.rows[i].cells[1].childNodes[0].innerHTML,
-                 tag:table.rows[i].cells[2].childNodes[0].innerHTML,
-                 description:table.rows[i].cells[3].childNodes[0].innerHTML});
+        var nameText = table.rows[i].cells[1].childNodes[0].innerHTML;
+        var urlText = table.rows[i].cells[2].childNodes[0].innerHTML;
+        var tagText = table.rows[i].cells[3].childNodes[0].innerHTML;
+        var despText = table.rows[i].cells[4].childNodes[0].innerHTML;
+        validateBookmark(nameText, urlText, tagText, despText);
+        bm.push({name:nameText,url:urlText,tag:tagText,description:despText});
     }
     return bm;
 }
@@ -290,25 +516,42 @@ function showBookmarks(objBookmarks)
     
     for(var i=0; i<objBookmarks.length; ++i)
     {
-        var row = document.createElement("tr");
-        table.appendChild(row);
-        for(item in objBookmarks[i])
+        addBookmarkToTable(objBookmarks[i], -1);
+    }
+    makeTableEditable();
+}
+
+// 表格添加一行
+function addBookmarkToTable(bookmark, pos)
+{
+    var table = document.getElementById("bookmarksTable");
+    var row = table.insertRow(pos);
+    var checkCol = document.createElement("td");
+    row.appendChild(checkCol);
+    var check = document.createElement("input");
+    checkCol.appendChild(check);
+    check.type = "checkbox";
+    for(item in bookmark)
+    {
+        var col = document.createElement("td");
+        row.appendChild(col);
+        var colData = document.createElement("a");
+        col.appendChild(colData);
+        colData.innerHTML = bookmark[item];
+        colData.className = "editable";
+    }
+}
+// 获取选定的行号
+function getSelectedBookmarks()
+{
+    var selectedRow = [];
+    var table = $("#bookmarksTable")[0];
+    for(var i=0; i<table.rows.length; i++)
+    {
+        if(table.rows[i].cells[0].childNodes[0].checked == true)
         {
-            var col = document.createElement("td");
-            row.appendChild(col);
-            var colData = document.createElement("a");
-            col.appendChild(colData);
-            colData.innerHTML = objBookmarks[i][item];
-            colData.className = "editable";
+            selectedRow.push(i);
         }
     }
-    $('.editable').editable(
-    {
-        type: 'text',
-        mode : 'popup',
-        //success: function(response, newValue) 
-        //{
-        //    userModel.set('username', newValue); //update backbone model
-        //}
-    });
+    return selectedRow;
 }

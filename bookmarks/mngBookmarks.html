@@ -10,10 +10,18 @@
     <link href="../util/X-editable/tip-yellowsimple.css" rel="stylesheet">
     <script src="../util/X-editable/jquery.poshytip.js"></script>
         
+    <!-- select2 -->
+    <link href="../util/X-editable/select2.css" rel="stylesheet">
+    <script src="../util/X-editable/select2.js"></script>
+    
     <!-- x-editable (jquery) -->
     <link href="../util/X-editable/jquery-editable.css" rel="stylesheet">
     <script src="../util/X-editable/jquery-editable-poshytip.js"></script>
+    
     <script src="mngBookmarks.js"></script>
+    
+    <!-- 模态框样式 -->
+    <link href="../util/modal-dialog.css" rel="stylesheet">
 </head>
 
 <body>
@@ -35,10 +43,18 @@
                 <td>
                     <input type="button" value="更新至书签栏" id="updateBookmarkBar"/>
                 </td>
+                <td>
+                    <input type="button" value="删除选定书签" id="delSelectedBookmarks"/>
+                </td>
+                <td>
+                    <input type="button" value="添加书签" id="adddBookmark"/>
+                </td>
             </tr>
         </table>
     </div>
     <div id="bookmarksDiv" style="padding-top: 30px;"></div>
+    <div id="modal-overlay">
+    <div id="modal-data"></div></div>
 </body>
 
 </html>
