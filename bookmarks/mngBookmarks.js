@@ -1,7 +1,7 @@
 $(document).ready(function() 
 {
     // 一些全局变量
-    window.localTest = true;   // 是否本地测试
+    window.localTest = false;   // 是否本地测试
     window.bookmarkUrl = window.localTest ? "http://localhost/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
     
     // 一些绑定
