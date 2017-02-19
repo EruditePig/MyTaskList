@@ -348,8 +348,15 @@ function adddBookmark()
     labelTag.style = "display:inline-block; width: 20%;";
     labelTag.innerHTML = "tag";
     divTag.appendChild(labelTag);
+    var inputTag = document.createElement("input");
+    inputTag.id = "inputTag";
+    inputTag.style = "display:inline-block;; width: 75%;";
+    divTag.appendChild(inputTag);
 
     // 分析常用的几个标签，动态展示出来
+    var divTagList = document.createElement("div");
+    divTagList.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divTagList);
     $.when(deferredChromeStorageLocalGet("bookmarks"))
     .done(
         function(localBookmarks)
@@ -374,21 +381,54 @@ function adddBookmark()
                 tagList.push(tagListWithCount[i][0])
             }
             // 用带标签的下拉选项
-            var inputTag = document.createElement("a");
-            divTag.appendChild(inputTag);
-            inputTag.style = "display:inline-block; width: 75%;";
-            inputTag.id = "editableTag";
-            $('#editableTag').editable({
-                type: 'select2',
-                title : "Enter Tags",
-                select2: {
-                    placeholder: 'Enter Tags',
-                    width : "200px",
-                    tags: tagList,
-                    tokenSeparators: [",", " "],
-                    closeOnSelect: false
-                }
-            });
+            var btns = [];
+            for (var i = 0; i < tagList.length; ++i) 
+            {
+            	btns.push(document.createElement("input"));
+            	btns[i].type = "button";
+            	btns[i].value = tagList[i];
+            	btns[i].onclick = function()
+            	{
+            		var inputTagElem = document.getElementById("inputTag");
+            		var tagText = inputTagElem.value;
+     				var tags = tagText.split (';').filter(function(el) {return el.length != 0});
+            		var index = tags.indexOf(this.value);
+            		if (index==-1) // 没找到
+            		{
+						tags.push(this.value);
+            		}
+            		else
+            		{
+            			tags.splice(index,1);
+            		}
+					inputTagElem.value = tags.join(";");
+					if (this.style.color == "blue") 
+					{
+						this.style.color = "";
+					}
+					else
+					{
+						this.style.color = "blue";
+					}
+					
+            	};
+            	divTagList.appendChild(btns[i]);
+            };
+            // var inputTag = document.createElement("a");
+            // divTag.appendChild(inputTag);
+            // inputTag.style = "display:inline-block; width: 75%;";
+            // inputTag.id = "editableTag";
+            // $('#editableTag').editable({
+            //     type: 'select2',
+            //     title : "Enter Tags",
+            //     select2: {
+            //         placeholder: 'Enter Tags',
+            //         width : "200px",
+            //         tags: tagList,
+            //         tokenSeparators: [",", " "],
+            //         closeOnSelect: false
+            //     }
+            // });
         })
     .fail(
         function()
@@ -421,19 +461,7 @@ function adddBookmark()
     btnSubmit.style = "display:inline-block;";
     btnSubmit.onclick = function()
     {
-        var inputTag = document.getElementById("editableTag");
-        if(inputTag.tagName.toLowerCase() == "a")
-        {
-            var tagText = inputTag.innerHTML;
-        }
-        else
-        {
-            var tagText = inputTag.value;
-        }
-        if(tagText.toLowerCase() == "empty" )
-        {
-            tagText = "";
-        }
+        var tagText = inputTag.value;
         var nameText = inputName.value;
         var urlText = inputUrl.value;
         var despText = inputDesp.value;
@@ -441,7 +469,7 @@ function adddBookmark()
         var bookmark = {name:nameText, url:urlText, tag:tagText, description:despText};
         hideModalDialog();
         addBookmarkToTable(bookmark, 0);
-        makeTableEditable();
+        //makeTableEditable();
     };
     var btnQuit = document.createElement("input");
     divBtn.appendChild(btnQuit);
@@ -516,9 +544,16 @@ function showBookmarks(objBookmarks)
     
     for(var i=0; i<objBookmarks.length; ++i)
     {
-        addBookmarkToTable(objBookmarks[i], -1);
+    	if (i%2 == 0) 
+    	{
+        	addBookmarkToTable(objBookmarks[i], -1);
+    	}
+    	else
+    	{
+			addBookmarkToTable(objBookmarks[i], -1);
+    	}
     }
-    makeTableEditable();
+    //makeTableEditable();
 }
 
 // 表格添加一行
@@ -526,6 +561,12 @@ function addBookmarkToTable(bookmark, pos)
 {
     var table = document.getElementById("bookmarksTable");
     var row = table.insertRow(pos);
+    if (table.children[0].children.length%2==0)
+    {
+    	row.style.backgroundColor = "#D8D8EA";
+    }
+    row.addEventListener("click",modBookmark);
+    //row.style.height = "10px";
     var checkCol = document.createElement("td");
     row.appendChild(checkCol);
     var check = document.createElement("input");
@@ -535,12 +576,114 @@ function addBookmarkToTable(bookmark, pos)
     {
         var col = document.createElement("td");
         row.appendChild(col);
-        var colData = document.createElement("a");
-        col.appendChild(colData);
-        colData.innerHTML = bookmark[item];
-        colData.className = "editable";
+        var colDiv = document.createElement("div");
+        col.appendChild(colDiv);
+        colDiv.style.width = "200px";
+        colDiv.style.wordWrap = "break-word";
+        colDiv.innerHTML = bookmark[item];
+        //col.style.width = "25%";
+        //var colData = document.createElement("p");
+        //col.appendChild(colData);
+        //colData.innerHTML = bookmark[item];
+        //colData.className = "editable";
     }
 }
+
+// 修改表格某一行的数据
+function modBookmark(e)
+{
+	showModalDialog();    // 显示对话框
+    
+    var that  = this;
+    var divAdd = document.createElement("div");
+    $("#modal-data").append(divAdd);
+    
+    // title
+    var title = document.createElement("p");
+    title.innerHTML = "修改书签";
+    divAdd.appendChild(title);
+    
+    
+    // name
+    var divName = document.createElement("div");
+    divAdd.appendChild(divName);
+    divName.style = "margin-top: 5px;margin-bottom: 5px;";
+    var labelName = document.createElement("label");
+    labelName.style = "display:inline-block; width: 20%;";
+    labelName.innerHTML = "name";
+    divName.appendChild(labelName);
+    var inputName = document.createElement("input");
+    inputName.style = "display:inline-block;; width: 75%;";
+    inputName.value = this.children[1].children[0].innerHTML;
+    divName.appendChild(inputName);
+    
+ 	
+    // url
+    var divUrl = document.createElement("div");
+    divUrl.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divUrl);
+    var labelUrl = document.createElement("label");
+    labelUrl.style = "display:inline-block; width: 20%;";
+    labelUrl.innerHTML = "url";
+    divUrl.appendChild(labelUrl);
+    var inputUrl = document.createElement("input");
+    inputUrl.style = "display:inline-block;; width: 75%;";
+    inputUrl.value = this.children[2].children[0].innerHTML;
+    divUrl.appendChild(inputUrl);
+    
+    // tag
+    var divTag = document.createElement("div");
+    divTag.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divTag);
+    var labelTag = document.createElement("label");
+    labelTag.style = "display:inline-block; width: 20%;";
+    labelTag.innerHTML = "tag";
+    divTag.appendChild(labelTag);
+    var inputTag = document.createElement("input");
+    inputTag.id = "inputTag";
+    inputTag.style = "display:inline-block;; width: 75%;";
+    inputTag.value = this.children[3].children[0].innerHTML;
+    divTag.appendChild(inputTag);
+
+    // description
+    var divDesp = document.createElement("div");
+    divDesp.style = "margin-top: 5px;margin-bottom: 5px;";
+    divAdd.appendChild(divDesp);
+    var labelDesp = document.createElement("label");
+    labelDesp.style = "display:inline-block; width: 20%;";
+    labelDesp.innerHTML = "描述";
+    divDesp.appendChild(labelDesp);
+    var inputDesp = document.createElement("input");
+    inputDesp.style = "display:inline-block;; width: 75%;";
+    inputDesp.value = this.children[4].children[0].innerHTML;
+    divDesp.appendChild(inputDesp);
+
+
+    // 确定按钮
+    var divBtn = document.createElement("div");
+    divBtn.style = "text-align: right;";
+    divAdd.appendChild(divBtn);
+    var btnSubmit = document.createElement("input");
+    divBtn.appendChild(btnSubmit);
+    btnSubmit.value = "确定";
+    btnSubmit.type = "button";
+    btnSubmit.style = "display:inline-block;";
+    btnSubmit.onclick = function()
+    {
+    	that.children[1].children[0].innerHTML = inputName.value;
+    	that.children[2].children[0].innerHTML = inputUrl.value;
+    	that.children[3].children[0].innerHTML = inputTag.value;
+    	that.children[4].children[0].innerHTML = inputDesp.value;
+        hideModalDialog();
+    };
+    var btnQuit = document.createElement("input");
+    divBtn.appendChild(btnQuit);
+    btnQuit.value = "取消";
+    btnQuit.type = "button";
+    btnQuit.style = "display:inline-block;";
+    btnQuit.onclick = hideModalDialog;
+}
+
 // 获取选定的行号
 function getSelectedBookmarks()
 {
