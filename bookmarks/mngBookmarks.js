@@ -138,7 +138,7 @@ function getBookmarksTagStat(bm)
     // 循环所有书签，给所有tag计数
     for (var i=0; i<bm.length; ++i)
     {
-        var tags = bm[i].tag.split(/,/).map(function(s) { return s.trim() }).filter(Boolean);
+        var tags = bm[i].tag.split(/[,;]/).map(function(s) { return s.trim() }).filter(Boolean);
         for (var j=0; j<tags.length; ++j)
         {
             if(tags[j] != "")
@@ -226,7 +226,7 @@ function updateBookmarkBar()
        
         for(var i=0; i<bm.length; ++i)
         {
-            var tags = bm[i].tag.split(/,/).map(function(s) { return s.trim() }).filter(Boolean);
+            var tags = bm[i].tag.split(/[,;]/).map(function(s) { return s.trim() }).filter(Boolean);
             if(tags.length == 0)
             {
                 bmNoFolder.push(bm[i]);
@@ -391,7 +391,7 @@ function adddBookmark()
             	{
             		var inputTagElem = document.getElementById("inputTag");
             		var tagText = inputTagElem.value;
-     				var tags = tagText.split (';').filter(function(el) {return el.length != 0});
+     				var tags = tagText.split (/[,;]/).filter(function(el) {return el.length != 0});
             		var index = tags.indexOf(this.value);
             		if (index==-1) // 没找到
             		{
