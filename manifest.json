@@ -1,9 +1,9 @@
-{
+﻿{
   "manifest_version": 2,
   "name": "SJX_Crx",
   "description": "This is the SJX's crx stufy program.",
   "version": "1.0",
-  "permissions": ["tabs","contextMenus", "storage", "bookmarks", "http://www.etymonline.com/", "http://sjxphp56.applinzi.com/", "http://localhost/"],
+  "permissions": ["tabs","contextMenus", "storage", "bookmarks", "http://www.etymonline.com/", "http://sjxphp56.applinzi.com/", "http://localhost/", "http://eruditepig.pythonanywhere.com/"],
   "content_scripts": 
   [
     // 已经不用WSJ的学英语服务，所以停掉

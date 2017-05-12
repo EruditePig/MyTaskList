@@ -1,8 +1,8 @@
-$(document).ready(function() 
+﻿$(document).ready(function() 
 {
     // 一些全局变量
     window.localTest = false;   // 是否本地测试
-    window.bookmarkUrl = window.localTest ? "http://localhost/bookmarks.php" : "http://sjxphp56.applinzi.com/bookmarks/bookmarks.php";
+    window.bookmarkUrl = window.localTest ? "http://localhost:8080/bookmarks" : "http://eruditepig.pythonanywhere.com/bookmarks";
     
     // 一些绑定
     $("#getBookmarksFromServer").click(getBookmarksFromServer);
@@ -71,10 +71,10 @@ function deferredChromeStorageLocalGet(key)
 function getBookmarksFromServer()
 {
     clearTable();
-    $.post(window.bookmarkUrl,{action:"getBookmarks"})
+    $.post(window.bookmarkUrl,{"action":"getBookmarks"})
     .done(function(result)
         {
-            var objBookmarks = JSON.parse(result).bookmarks;
+            var objBookmarks = JSON.parse(result);
             showBookmarks(objBookmarks);
         })
     .fail(function()
